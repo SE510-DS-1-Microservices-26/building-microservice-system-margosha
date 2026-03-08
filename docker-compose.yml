@@ -14,7 +14,7 @@ services:
     networks:
       - cafetiria-network
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d cafetiria" ]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d cafetiria"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -36,6 +36,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8088/api/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
 
 networks:
   cafetiria-network:
