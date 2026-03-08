@@ -13,7 +13,7 @@ import static org.springframework.http.HttpStatus.OK;
 import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 
 @RestController
-@RequestMapping("/actuator/health")
+@RequestMapping({"health", "health/"})
 @RequiredArgsConstructor
 public class HealthController {
     private final HealthEndpoint healthEndpoint;

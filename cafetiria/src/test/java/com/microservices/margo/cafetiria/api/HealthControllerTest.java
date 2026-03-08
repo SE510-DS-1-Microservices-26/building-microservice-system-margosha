@@ -29,7 +29,7 @@ class HealthControllerTest {
     @MockitoBean
     private HealthEndpoint healthEndpoint;
 
-    private static final String HEALTH_PATH = "/actuator/health";
+    private static final String HEALTH_PATH = "/health";
     private HealthDescriptor realDescriptor;
 
     @BeforeEach
