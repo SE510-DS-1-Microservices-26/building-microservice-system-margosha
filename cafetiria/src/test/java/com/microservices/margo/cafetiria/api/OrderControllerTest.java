@@ -162,6 +162,32 @@ class OrderControllerTest {
     }
 
     @Test
+    void create_shouldReturn400_whenItemNameIsTooLong() throws Exception {
+        // Arrange
+        CreateOrderRequest request = new CreateOrderRequest(
+               "Alice", "A".repeat(256), 2, new BigDecimal("5.99"));
+
+        // Act & Assert
+        mockMvc.perform(post(ORDERS_PATH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void create_shouldReturn400_whenCustomerNameIsTooLong() throws Exception {
+        // Arrange
+        CreateOrderRequest request = new CreateOrderRequest(
+                "A".repeat(256), "late", 2, new BigDecimal("5.99"));
+
+        // Act & Assert
+        mockMvc.perform(post(ORDERS_PATH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void getById_shouldReturn200_whenOrderExists() throws Exception {
         // Arrange
         when(getOrder.execute(ORDER_ID)).thenReturn(sampleOrder());

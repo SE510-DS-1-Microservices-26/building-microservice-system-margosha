@@ -12,8 +12,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Optional;
 import java.util.UUID;
-import static com.microservices.margo.cafetiria.core.application.usecase.TestData.buildEntity;
-import static com.microservices.margo.cafetiria.core.application.usecase.TestData.buildOrder;
+import static com.microservices.margo.cafetiria.TestData.buildEntity;
+import static com.microservices.margo.cafetiria.TestData.buildOrder;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 

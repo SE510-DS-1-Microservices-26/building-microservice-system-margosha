@@ -236,6 +236,21 @@ class OrderTest {
         assertThat(messages).contains("Customer name must be specified.");
     }
 
+    @Test
+    @DisplayName("does not allow customerName longer than 255 characters")
+    void customerName_isTooLong() {
+        // Arrange
+        Order order = pendingOrder().toBuilder()
+                .customerName("A".repeat(256))
+                .build();
+
+        // Act
+        Set<String> messages = violationMessages(order);
+
+        // Assert
+        assertThat(messages).contains("Customer name must consist at most of 255 symbols");
+    }
+
     @ParameterizedTest
     @NullSource
     @EmptySource
@@ -249,6 +264,21 @@ class OrderTest {
 
         // Assert
         assertThat(messages).contains("Item name must be specified.");
+    }
+
+    @Test
+    @DisplayName("does not allow itemName longer than 255 characters")
+    void itemName_isTooLong() {
+        // Arrange
+        Order order = pendingOrder().toBuilder()
+                .itemName("A".repeat(256))
+                .build();
+
+        // Act
+        Set<String> messages = violationMessages(order);
+
+        // Assert
+        assertThat(messages).contains("Item name must consist at most of 255 symbols");
     }
 
     @ParameterizedTest

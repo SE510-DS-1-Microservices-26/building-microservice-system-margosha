@@ -15,6 +15,8 @@ import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -23,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 import static org.springframework.http.HttpStatus.METHOD_NOT_ALLOWED;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -245,6 +248,38 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getStatusCode()).isEqualTo(UNSUPPORTED_MEDIA_TYPE);
         assertThat(response.getBody()).isEqualTo(exception.getMessage());
     }
+
+    @Test
+    @DisplayName("returns 409 for DataIntegrityViolationException")
+    void handleDataIntegrityViolation_returns409() {
+        // Act
+        ResponseEntity<?> response = handler.handleDataIntegrityViolation();
+
+        // Assert
+        assertThat(response.getStatusCode()).isEqualTo(CONFLICT);
+        assertNotNull(response.getBody());
+        assertThat(((ErrorResponse) response.getBody()).message())
+                .isEqualTo("Failed to save entity because some rules where neglected.");
+    }
+
+    @Test
+    @DisplayName("returns 404 for NoHandlerFoundException")
+    void handleNoHandlerFound_returns404() {
+        // Arrange
+        NoHandlerFoundException exception = new NoHandlerFoundException(
+                "GET", "/api/orders/unknown", new org.springframework.http.HttpHeaders());
+
+        // Act
+        ResponseEntity<?> response = handler.handleNoHandlerFound(exception);
+
+        // Assert
+        assertThat(response.getStatusCode()).isEqualTo(NOT_FOUND);
+        assertNotNull(response.getBody());
+        assertThat(((ErrorResponse) response.getBody()).message())
+                .contains("GET")
+                .contains("/api/orders/unknown");
+    }
+
 
     private MethodArgumentNotValidException buildMethodArgumentNotValidException(
             String... fieldAndMessagePairs) throws Exception {

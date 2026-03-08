@@ -10,6 +10,7 @@
 
 1. **Customer name cannot be blank**
 2. **Item name cannot be blank**
+3. **Customer and item names can at most contain 255 symbols**
 3. **Quantity must be at least 1**
 4. **Price cannot be negative**
 These rules are enforced within `Order` domain entity with the help of annotations.
@@ -33,6 +34,7 @@ src/main/java/com/cafeteria/:
   * exception/ -> ErrorResponse, GlobalExceptionHandler
 * core/
   * domain/ -> Order aggregate, OrderStatus enum
+    * validation/ -> ValidationConstants
   * application/
     * request/ -> Request DTOs: CreateOrderRequest, UpdateOrderStatusRequest
     * usecase/ -> CreateOrderUseCase, GetOrderUseCase, UpdateOrderStatusUseCase
@@ -122,13 +124,13 @@ The API will be available at `http://localhost:8088`.
 
 ### Test coverage:
 * `HealthControllerTest` - 4 unit tests
-* `OrderControllerTest` - 15 unit tests
+* `OrderControllerTest` - 17 unit tests
 * `CreateOrderUseCaseTest` - 1 unit test
 * `GetOrderUseCaseTest` - 2 unit tests
 * `UpdateOrderStatusUseCaseTest` - 7 unit tests
-* `OrderTest` — 41 unit tests
+* `OrderTest` — 43 unit tests
 * `OrderStatusTest` - 16 unit tests
-* `GlobalExceptionHandlerTest` — 13 unit tests
+* `GlobalExceptionHandlerTest` — 15 unit tests
 ---
 
 ---

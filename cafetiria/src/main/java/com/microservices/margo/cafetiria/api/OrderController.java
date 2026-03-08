@@ -23,7 +23,7 @@ import java.util.UUID;
 
 @Validated
 @RestController
-@RequestMapping("/orders")
+@RequestMapping({"/orders", "/orders/"})
 @RequiredArgsConstructor
 public class OrderController {
     private final CreateOrderUseCase createOrder;
