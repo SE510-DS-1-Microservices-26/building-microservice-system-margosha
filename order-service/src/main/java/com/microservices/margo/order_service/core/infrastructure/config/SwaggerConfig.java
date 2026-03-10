@@ -11,7 +11,7 @@ public class SwaggerConfig {
     @Bean
     public OpenAPI openAPI(){
         return new OpenAPI().info(new Info()
-                        .title("Cafeteria Delivery API")
+                        .title("Order Service API")
                         .description("API for managing orders")
                         .version("1.0.0"));
     }
