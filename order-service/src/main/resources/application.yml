@@ -1,0 +1,20 @@
+spring:
+  application.name: Order Service
+  datasource:
+    password: ${DB_PASSWORD}
+    url: ${DB_URL}
+    username: ${DB_USER}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    database: postgresql
+    properties.hibernate.ddl-auto: validate
+  web:
+    resources:
+      add-mappings: false
+
+management.endpoint.health.show-details: always
+server:
+  servlet.context-path: /api
+  port: 8088
+
+user-service.users-url: ${USERS_URL:http:/localhost:8080/api/users}
