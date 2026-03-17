@@ -1,0 +1,303 @@
+# Practice 4: Cafeteria Delivery
+
+**Cafeteria Delivery** represents a modular monolith for placing and managing cafeteria food orders.
+
+- **Core Item:** `Order`
+- **Core Action:** `CreateOrder`
+
+---
+## Domain Rules
+
+1. **Customer name cannot be blank**
+2. **Item name cannot be blank**
+3. **Customer and item names can at most contain 255 symbols**
+3. **Quantity must be at least 1**
+4. **Price cannot be negative**
+These rules are enforced within `Order` domain entity with the help of annotations.
+5. **Status transitions are strictly limited** — `PENDING → CONFIRMED/CANCELLED`, `CONFIRMED → DELIVERED/CANCELLED`. Terminal states (`DELIVERED`, `CANCELLED`) cannot be changed. Enforced within `Order.changeStatus()` method.
+---
+
+---
+## ADR: Why Modular Monolith First?
+
+Staring with this approach allows to avoid operational overhead. 
+There is no need to start extracting microservices yet because the logic is currently pretty simple and allows for staying with the monolith approach.
+The deployment stays simple (one Docker image and compose file).
+Nevertheless, clear module boundaries can be easily extracted into a separate microservice when time comes.
+For now, in this early young stage, we should avoid unnecessary complexities.
+
+---
+## Architecture
+
+src/main/java/com/cafeteria/:
+* api/ ->  HTTP layer (no business logic): OrderController, HealthController
+  * exception/ -> ErrorResponse, GlobalExceptionHandler
+* core/
+  * domain/ -> Order aggregate, OrderStatus enum
+    * validation/ -> ValidationConstants
+  * application/
+    * request/ -> Request DTOs: CreateOrderRequest, UpdateOrderStatusRequest
+    * usecase/ -> CreateOrderUseCase, GetOrderUseCase, UpdateOrderStatusUseCase
+    * mapper/ -> OrderMapper
+  * infrastructure/
+    * entity/ -> JPA OrderEntity
+    * repository/ -> JPA OrderRepository interface
+    * config/ -> ObjectMapperConfig and SwaggerConfig
+
+One migration was applied, which encapsulated **orders** table creation. It is located within _/src/main/resources/db/migration/V1__create_orders_table.sql_.
+---
+
+---
+## How to Run Locally
+
+**Prerequisites:** Java 21+, PostgreSQL running on `localhost:5432`
+1. Create the database:
+```sql
+CREATE DATABASE cafetiria;
+```
+
+2. Set environment variables:
+```bash
+export DB_USER=postgres
+export DB_PASSWORD=postgres
+export DB_URL=jdbc:postgresql://localhost:5432/cafetiria
+```
+
+3. Run the application:
+```bash
+./mvnw spring-boot:run
+```
+
+The API will be available at `http://localhost:8088`.
+--- 
+
+---
+## How to Run with Docker
+
+**Prerequisites:** Docker and Docker Compose installed.
+
+1. Create a `.env` file in the project root:
+```env
+DB_USER=postgres
+DB_PASSWORD=postgres
+```
+
+2. Start all services:
+```bash
+docker compose up --build
+```
+
+3. To stop and remove containers:
+```bash
+docker compose down
+```
+
+4. To stop and also remove the database volume:
+```bash
+docker compose down -v
+```
+
+The API will be available at `http://localhost:8088`.
+---
+
+---
+## How to Run Tests
+
+**Run all tests:**
+```bash
+./mvnw test
+```
+
+**Run a single test class:**
+```bash
+./mvnw test -Dtest=OrderTest
+./mvnw test -Dtest=GlobalExceptionHandlerTest
+./mvnw test -Dtest=CreateOrderUseCaseTest
+./mvnw test -Dtest=GetOrderUseCaseTest
+./mvnw test -Dtest=UpdateOrderStatusUseCaseTest
+```
+
+**Run a single test method:**
+```bash
+./mvnw test -Dtest=OrderTest#pendingToConfirmed
+```
+
+### Test coverage:
+* `HealthControllerTest` - 4 unit tests
+* `OrderControllerTest` - 17 unit tests
+* `CreateOrderUseCaseTest` - 1 unit test
+* `GetOrderUseCaseTest` - 2 unit tests
+* `UpdateOrderStatusUseCaseTest` - 7 unit tests
+* `OrderTest` — 43 unit tests
+* `OrderStatusTest` - 16 unit tests
+* `GlobalExceptionHandlerTest` — 15 unit tests
+---
+
+---
+## Swagger UI
+
+Once the application is running, interactive API docs are available at:
+
+```
+http://localhost:8088/swagger-ui/index.html
+```
+
+---
+# Health Check
+
+Returns the application health status. Responds with `200 OK` when the app and database are reachable, or `503 Service Unavailable` when any component is down.
+
+```bash
+curl http://localhost:8088/api/health
+```
+
+**Response `200 UP`:**
+```json
+{
+  "status": "UP",
+  "components": {
+    "db": { "status": "UP" },
+    "diskSpace": { "status": "UP" }
+  }
+}
+```
+
+**Response `503 DOWN`:**
+```json
+{
+  "status": "DOWN",
+  "components": {
+    "db": { "status": "DOWN" }
+  }
+}
+```
+
+---
+
+---
+## API Curl Examples
+
+### Create an order
+
+```bash
+curl -X POST http://localhost:8088/api/orders \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerName": "John Doe",
+    "itemName": "Latte",
+    "quantity": 2,
+    "price": 5.99
+  }'
+```
+
+**Response `201 Created`:**
+```json
+{
+  "id": "b3f1c2d4-e5a6-7890-bcde-f12345678901",
+  "customerName": "John Doe",
+  "itemName": "Latte",
+  "quantity": 2,
+  "price": 5.99,
+  "status": "PENDING",
+  "createdAt": "2024-03-01T10:00:00"
+}
+```
+
+---
+
+### Get an order by ID
+
+```bash
+curl http://localhost:8088/api/orders/b3f1c2d4-e5a6-7890-bcde-f12345678901
+```
+
+**Response `200 OK`:**
+```json
+{
+  "id": "b3f1c2d4-e5a6-7890-bcde-f12345678901",
+  "customerName": "John Doe",
+  "itemName": "Latte",
+  "quantity": 2,
+  "price": 5.99,
+  "status": "PENDING",
+  "createdAt": "2024-03-01T10:00:00"
+}
+```
+
+---
+
+### Update order status
+
+**PENDING → CONFIRMED:**
+```bash
+curl -X PATCH http://localhost:8088/api/orders/b3f1c2d4-e5a6-7890-bcde-f12345678901/status \
+  -H "Content-Type: application/json" \
+  -d '{"newStatus": "CONFIRMED"}'
+```
+
+**CONFIRMED → DELIVERED:**
+```bash
+curl -X PATCH http://localhost:8088/api/orders/b3f1c2d4-e5a6-7890-bcde-f12345678901/status \
+  -H "Content-Type: application/json" \
+  -d '{"newStatus": "DELIVERED"}'
+```
+
+**PENDING → CANCELLED:**
+```bash
+curl -X PATCH http://localhost:8088/api/orders/b3f1c2d4-e5a6-7890-bcde-f12345678901/status \
+  -H "Content-Type: application/json" \
+  -d '{"newStatus": "CANCELLED"}'
+```
+
+**Response `204 No Content`** (empty body on success).
+
+---
+
+### Error examples
+
+**Order not found `404`:**
+```bash
+curl http://localhost:8088/api/orders/00000000-0000-0000-0000-000000000000
+```
+```json
+{"message": "Order with id: 00000000-0000-0000-0000-000000000000 was not found!"}
+```
+
+**Validation failure `400`:**
+```bash
+curl -X POST http://localhost:8088/api/orders \
+  -H "Content-Type: application/json" \
+  -d '{"customerName": "", "itemName": "", "quantity": 0, "price": -1}'
+```
+```json
+{"message": "customerName: must not be blank|\nitemName: must not be blank|\nquantity: must be greater than or equal to 1|\nprice: must be greater than 0"}
+```
+
+**Illegal status transition `400`:**
+```bash
+curl -X PATCH http://localhost:8088/api/orders/b3f1c2d4-e5a6-7890-bcde-f12345678901/status \
+  -H "Content-Type: application/json" \
+  -d '{"newStatus": "DELIVERED"}'
+```
+```json
+{"message": "Cannot change order status from PENDING to DELIVERED"}
+```
+
+**Invalid UUID `400`:**
+```bash
+curl http://localhost:8088/orders/not-a-uuid
+```
+```json
+{"message":"Invalid value for parameter 'id': not-a-uuid"}
+```
+
+**Invalid json format `400`:**
+```bash
+curl -X PATCH http://localhost:8088/api/orders/bd193441-2520-4392-a0aa-195000965fea/status \
+  -H "Content-Type: application/json" \
+  -d '{"newStatus": "CANCEL'    
+```
+```json
+{"message":"Invalid JSON format in request body"}
+```
+---
