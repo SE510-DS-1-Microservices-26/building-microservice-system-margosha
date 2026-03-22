@@ -1,79 +1,72 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
-  name: workflow-service
+  name: workflow-db
 spec:
+  serviceName: workflow-db
   replicas: 1
   selector:
     matchLabels:
-      app: workflow-service
+      app: workflow-db
   template:
     metadata:
       labels:
-        app: workflow-service
+        app: workflow-db
     spec:
-      initContainers:
-        - name: wait-for-db
-          image: busybox
-          command: ['sh', '-c', 'until nc -z workflow-db 5432; do echo waiting for workflow-db; sleep 2; done']
       containers:
-        - name: workflow-service
-          image: workflow-service:latest
-          imagePullPolicy: Never
+        - name: postgres
+          image: postgres:16
           ports:
-            - containerPort: 8091
+            - containerPort: 5432
           env:
-            - name: DB_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: cafetiria-config
-                  key: WORKFLOW_DB_URL
-            - name: DB_USER
+            - name: POSTGRES_DB
+              value: workflows
+            - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
                   name: cafetiria-secret
                   key: DB_USER
-            - name: DB_PASSWORD
+            - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: cafetiria-secret
                   key: DB_PASSWORD
-            - name: ORDER_SERVICE_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: cafetiria-config
-                  key: ORDER_SERVICE_URL
           readinessProbe:
-            httpGet:
-              path: /api/actuator/health
-              port: 8091
-            initialDelaySeconds: 40
-            periodSeconds: 10
-            timeoutSeconds: 5
-            failureThreshold: 5
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-d", "workflows"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
           livenessProbe:
-            httpGet:
-              path: /api/actuator/health
-              port: 8091
-            initialDelaySeconds: 60
-            periodSeconds: 20
-            timeoutSeconds: 5
-            failureThreshold: 3
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-d", "workflows"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
           resources:
             requests:
-              cpu: "100m"
-              memory: "256Mi"
+              cpu: "50m"
+              memory: "64Mi"
             limits:
-              cpu: "500m"
-              memory: "384Mi"
+              cpu: "200m"
+              memory: "128Mi"
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: workflow-db-data
+  volumeClaimTemplates:
+    - metadata:
+        name: workflow-db-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: workflow-service
+  name: workflow-db
 spec:
   selector:
-    app: workflow-service
+    app: workflow-db
   ports:
-    - port: 8091
-      targetPort: 8091
+    - port: 5432
+      targetPort: 5432
